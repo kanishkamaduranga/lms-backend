@@ -110,6 +110,9 @@ dist
 *.sln
 *.sw?
 
+
+.npmrc
+
 # Local development files
 *.local
 
