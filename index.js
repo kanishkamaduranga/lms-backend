@@ -3,6 +3,7 @@ const express = require('express');
 const app = express();
 
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const authMiddleware = require('./middlewares/authMiddleware');
 
 app.get('/', (req, res) => {
@@ -12,6 +13,7 @@ app.get('/', (req, res) => {
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // Example protected route
 app.get('/api/profile', authMiddleware, async (req, res) => {
