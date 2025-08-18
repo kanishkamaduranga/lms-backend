@@ -23,6 +23,24 @@ exports.getAllUsers = async (req, res) => {
   res.json({ users });
 };
 
+exports.getCurrentUser = async (req, res) => {
+  try {
+    // The auth middleware should have attached the user ID to req.user
+    const user = await db('users')
+      .where({ id: req.user.userId })
+      .first();
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json({ user });
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    res.status(500).json({ message: 'Error fetching user data' });
+  }
+};
+
 exports.getUserById = async (req, res) => {
   const { id } = req.params;
   const user = await db('users').where({ id }).first();
