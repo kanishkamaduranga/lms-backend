@@ -1,21 +1,43 @@
+require('dotenv').config();
 const express = require('express');
-const connectDB = require('./config/db');
-const bodyParser = require('body-parser');
-
+const cors = require('cors');
 const app = express();
 
-// Connect Database
-connectDB();
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true // If using cookies/sessions
+}));
 
-// Init Middleware
-app.use(bodyParser.json());
+// Pre-flight requests handler
+//app.options('*', cors());
 
-app.get('/', (req, res) => res.send('API Running'));
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const courseRoutes = require('./routes/courseRoutes');
+const authMiddleware = require('./middlewares/authMiddleware');
 
-// Define Routes
-app.use('/api/users', require('./routes/api/users'));
-app.use('/api/auth', require('./routes/api/auth'));
+app.get('/', (req, res) => {
+  res.send('API is working');
+});
+
+app.use(express.json());
+
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/courses', courseRoutes);
+
+// Example protected route
+app.get('/api/profile', authMiddleware, async (req, res) => {
+  res.json({ message: `Welcome user ${req.user.userId}` });
+});
 
 const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
 
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+
