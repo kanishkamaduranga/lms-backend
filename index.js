@@ -1,9 +1,17 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const app = express();
+
+app.use(cors({
+  origin: 'http://localhost:3000', // Your frontend URL
+  credentials: true // If using cookies/sessions
+}));
 
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const courseRoutes = require('./routes/courseRoutes');
 const authMiddleware = require('./middlewares/authMiddleware');
 
 app.get('/', (req, res) => {
@@ -14,6 +22,8 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/courses', courseRoutes);
 
 // Example protected route
 app.get('/api/profile', authMiddleware, async (req, res) => {
