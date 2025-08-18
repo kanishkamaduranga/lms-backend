@@ -22,6 +22,7 @@
   "homepage": "https://github.com/kanishkamaduranga/lms-backend#readme",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "express-list-endpoints": "^7.1.1",
