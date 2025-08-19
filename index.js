@@ -14,6 +14,7 @@ app.use(cors({
 //app.options('*', cors());
 
 const authRoutes = require('./routes/authRoutes');
+const menuRoutes = require('./routes/menuRoutes');
 const userRoutes = require('./routes/userRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const courseRoutes = require('./routes/courseRoutes');
@@ -26,6 +27,7 @@ app.get('/', (req, res) => {
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api', menuRoutes); 
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/courses', courseRoutes);
