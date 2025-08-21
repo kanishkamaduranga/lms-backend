@@ -105,9 +105,17 @@ exports.listCategories = async (req, res) => {
     // Get total count for pagination info
     const totalCount = await db('categories').count('* as count').first();
 
-    // Get paginated categories
-    const categories = await db('categories')
-      .orderBy([{ column: 'parent_id', order: 'asc' }, { column: 'position', order: 'asc' }])
+    // Get paginated categories with parent name using left join
+    const categories = await db('categories as c')
+      .select(
+        'c.*',
+        db.raw('p.name as parent_name')
+      )
+      .leftJoin('categories as p', 'c.parent_id', 'p.id')
+      .orderBy([
+        { column: 'c.parent_id', order: 'asc' }, 
+        { column: 'c.position', order: 'asc' }
+      ])
       .limit(limit)
       .offset(offset);
     
