@@ -89,10 +89,55 @@ exports.reorderCategory = async (req, res) => {
 
 exports.listCategories = async (req, res) => {
   try {
-    const categories = await db('categories')
-      .orderBy([{ column: 'parent_id', order: 'asc' }, { column: 'position', order: 'asc' }]);
+    // Get pagination parameters from query string
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // Validate pagination parameters
+    if (page < 1) {
+      return res.status(400).json({ message: 'Page must be greater than 0' });
+    }
+    if (limit < 1 || limit > 100) {
+      return res.status(400).json({ message: 'Limit must be between 1 and 100' });
+    }
+
+    // Get total count for pagination info
+    const totalCount = await db('categories').count('* as count').first();
+
+    // Get paginated categories with parent name using left join
+    const categories = await db('categories as c')
+      .select(
+        'c.*',
+        db.raw('p.name as parent_name')
+      )
+      .leftJoin('categories as p', 'c.parent_id', 'p.id')
+      .orderBy([
+        { column: 'c.parent_id', order: 'asc' }, 
+        { column: 'c.position', order: 'asc' }
+      ])
+      .limit(limit)
+      .offset(offset);
     
-    res.json({ categories });
+    // Calculate pagination metadata
+    const total = parseInt(totalCount.count);
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    res.json({ 
+      categories,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage,
+        hasPrevPage,
+        nextPage: hasNextPage ? page + 1 : null,
+        prevPage: hasPrevPage ? page - 1 : null
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Error listing categories', error: error.message });
   }

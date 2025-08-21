@@ -54,8 +54,99 @@ exports.addContent = async (req, res) => {
 
 exports.listCourses = async (req, res) => {
   try {
-    const courses = await db('courses').select('*');
-    res.json({ courses });
+    // Get pagination parameters from query string
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // Validate pagination parameters
+    if (page < 1) {
+      return res.status(400).json({ message: 'Page must be greater than 0' });
+    }
+    if (limit < 1 || limit > 100) {
+      return res.status(400).json({ message: 'Limit must be between 1 and 100' });
+    }
+
+    // Get total count for pagination info
+    const totalCount = await db('courses').count('* as count').first();
+
+    // Get paginated courses
+    const courses = await db('courses')
+      .orderBy('created_at', 'desc') // or any other ordering you prefer
+      .limit(limit)
+      .offset(offset);
+    
+    // If no courses found, return empty response
+    if (courses.length === 0) {
+      return res.json({ 
+        courses: [],
+        pagination: {
+          currentPage: page,
+          totalPages: 0,
+          totalItems: 0,
+          itemsPerPage: limit,
+          hasNextPage: false,
+          hasPrevPage: false,
+          nextPage: null,
+          prevPage: null
+        }
+      });
+    }
+
+    // Get course IDs for batch querying categories
+    const courseIds = courses.map(course => course.id);
+
+    // Get all course-category relationships for the paginated courses
+    const courseCategories = await db('course_categories')
+      .whereIn('course_categories.course_id', courseIds)
+      .join('categories', 'categories.id', 'course_categories.category_id')
+      .select(
+        'course_categories.course_id',
+        'categories.id',
+        'categories.name',
+        'categories.parent_id',
+        'categories.position'
+      );
+    
+    // Group categories by course_id
+    const categoriesByCourse = {};
+    courseCategories.forEach(cc => {
+      if (!categoriesByCourse[cc.course_id]) {
+        categoriesByCourse[cc.course_id] = [];
+      }
+      categoriesByCourse[cc.course_id].push({
+        id: cc.id,
+        name: cc.name,
+        parent_id: cc.parent_id,
+        position: cc.position
+      });
+    });
+    
+    // Add categories to each course
+    const coursesWithCategories = courses.map(course => ({
+      ...course,
+      categories: categoriesByCourse[course.id] || []
+    }));
+
+    // Calculate pagination metadata
+    const total = parseInt(totalCount.count);
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    res.json({ 
+      courses: coursesWithCategories,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage,
+        hasPrevPage,
+        nextPage: hasNextPage ? page + 1 : null,
+        prevPage: hasPrevPage ? page - 1 : null
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Error listing courses', error: error.message });
   }
