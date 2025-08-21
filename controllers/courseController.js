@@ -54,18 +54,40 @@ exports.addContent = async (req, res) => {
 
 exports.listCourses = async (req, res) => {
   try {
-    const rows = await db('courses as c')
-      .leftJoin('course_categories as cc', 'cc.course_id', 'c.id')
-      .leftJoin('categories as cat', 'cat.id', 'cc.category_id')
-      .select('c.*')
+    const courses = await db('courses').select('*');
+    
+    // Get all course-category relationships
+    const courseCategories = await db('course_categories')
+      .join('categories', 'categories.id', 'course_categories.category_id')
       .select(
-        db.raw(
-          "COALESCE(json_agg(DISTINCT jsonb_build_object('id', cat.id, 'name', cat.name, 'parent_id', cat.parent_id, 'position', cat.position)) FILTER (WHERE cat.id IS NOT NULL), '[]') as categories"
-        )
-      )
-      .groupBy('c.id');
-
-    res.json({ courses: rows });
+        'course_categories.course_id',
+        'categories.id',
+        'categories.name',
+        'categories.parent_id',
+        'categories.position'
+      );
+    
+    // Group categories by course_id
+    const categoriesByCourse = {};
+    courseCategories.forEach(cc => {
+      if (!categoriesByCourse[cc.course_id]) {
+        categoriesByCourse[cc.course_id] = [];
+      }
+      categoriesByCourse[cc.course_id].push({
+        id: cc.id,
+        name: cc.name,
+        parent_id: cc.parent_id,
+        position: cc.position
+      });
+    });
+    
+    // Add categories to each course
+    const coursesWithCategories = courses.map(course => ({
+      ...course,
+      categories: categoriesByCourse[course.id] || []
+    }));
+    
+    res.json({ courses: coursesWithCategories });
   } catch (error) {
     res.status(500).json({ message: 'Error listing courses', error: error.message });
   }
