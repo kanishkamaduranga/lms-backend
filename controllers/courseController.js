@@ -54,8 +54,18 @@ exports.addContent = async (req, res) => {
 
 exports.listCourses = async (req, res) => {
   try {
-    const courses = await db('courses').select('*');
-    res.json({ courses });
+    const rows = await db('courses as c')
+      .leftJoin('course_categories as cc', 'cc.course_id', 'c.id')
+      .leftJoin('categories as cat', 'cat.id', 'cc.category_id')
+      .select('c.*')
+      .select(
+        db.raw(
+          "COALESCE(json_agg(DISTINCT jsonb_build_object('id', cat.id, 'name', cat.name, 'parent_id', cat.parent_id, 'position', cat.position)) FILTER (WHERE cat.id IS NOT NULL), '[]') as categories"
+        )
+      )
+      .groupBy('c.id');
+
+    res.json({ courses: rows });
   } catch (error) {
     res.status(500).json({ message: 'Error listing courses', error: error.message });
   }
