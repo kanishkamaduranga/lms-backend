@@ -23,6 +23,36 @@ exports.getAllUsers = async (req, res) => {
   res.json({ users });
 };
 
+exports.getUsersByRole = async (req, res) => {
+  try {
+    const { role } = req.params;
+    
+    // Validate role parameter
+    const validRoles = ['Admin', 'Instructor', 'Student', 'Guest'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ 
+        message: 'Invalid role parameter', 
+        validRoles: validRoles 
+      });
+    }
+
+    const users = await db('users')
+      .where({ role })
+      .select('id', 'full_name')
+      .orderBy('full_name');
+    
+    res.json({ 
+      message: `${role}s retrieved successfully`,
+      count: users.length,
+      role: role,
+      users 
+    });
+  } catch (error) {
+    console.error('Error fetching users by role:', error);
+    res.status(500).json({ message: 'Error fetching users' });
+  }
+};
+
 exports.getCurrentUser = async (req, res) => {
   try {
     // The auth middleware should have attached the user ID to req.user
